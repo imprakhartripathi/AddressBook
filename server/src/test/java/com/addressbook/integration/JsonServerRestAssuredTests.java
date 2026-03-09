@@ -3,6 +3,7 @@ package com.addressbook.integration;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.addressbook.dto.ApiResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -86,7 +87,7 @@ class JsonServerRestAssuredTests {
         );
 
         List contacts = (List) response.getData();
-        assert contacts.size() >= 1;
+        assertTrue(contacts.size() >= 1, "Expected contacts to be synced from JSON server");
 
         given()
             .baseUri(jsonServerUrl)
