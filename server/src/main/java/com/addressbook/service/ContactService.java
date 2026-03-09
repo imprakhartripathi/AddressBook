@@ -38,6 +38,8 @@ public interface ContactService {
 
     void deleteContact(String bookName, Long id);
 
+    List<Contact> addContacts(String bookName, List<Contact> contacts);
+
     Map<String, List<Contact>> getAllAddressBooks();
 
     List<String> getAddressBookNames();

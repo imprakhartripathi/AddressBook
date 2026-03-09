@@ -82,6 +82,18 @@ public class ContactServiceImpl implements ContactService {
     }
 
     @Override
+    public List<Contact> addContacts(String bookName, List<Contact> contacts) {
+        if (contacts == null || contacts.isEmpty()) {
+            throw new IllegalArgumentException("Contacts list is required");
+        }
+        List<Contact> created = new ArrayList<>();
+        for (Contact contact : contacts) {
+            created.add(createContact(bookName, contact));
+        }
+        return created;
+    }
+
+    @Override
     public Map<String, List<Contact>> getAllAddressBooks() {
         return addressBooks;
     }

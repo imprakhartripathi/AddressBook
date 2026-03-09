@@ -6,6 +6,8 @@ import com.addressbook.model.Contact;
 import com.addressbook.service.ContactService;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -22,9 +24,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api")
 public class ContactController {
     private final ContactService contactService;
+    private final ExecutorService executorService;
 
-    public ContactController(ContactService contactService) {
+    public ContactController(ContactService contactService, ExecutorService executorService) {
         this.contactService = contactService;
+        this.executorService = executorService;
     }
 
     @GetMapping("/contacts")
@@ -55,6 +59,22 @@ public class ContactController {
         Contact created = contactService.createContact(bookName, contact);
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(ApiResponse.success("Contact created", created));
+    }
+
+    @PostMapping("/contacts/bulk")
+    public ResponseEntity<ApiResponse<List<Contact>>> createContactsBulk(
+        @RequestParam(value = "book", required = false) String bookName,
+        @RequestParam(value = "async", required = false, defaultValue = "false") boolean async,
+        @RequestBody List<Contact> contacts
+    ) {
+        if (async) {
+            CompletableFuture.runAsync(() -> contactService.addContacts(bookName, contacts), executorService);
+            return ResponseEntity.accepted()
+                .body(ApiResponse.success("Async bulk contact creation started", null));
+        }
+        List<Contact> created = contactService.addContacts(bookName, contacts);
+        return ResponseEntity.status(HttpStatus.CREATED)
+            .body(ApiResponse.success("Bulk contacts created", created));
     }
 
     @PutMapping("/contacts/{id}")
