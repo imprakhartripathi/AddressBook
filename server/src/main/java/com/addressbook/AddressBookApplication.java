@@ -1,13 +1,12 @@
-package com.addressbook.server;
+package com.addressbook;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class ServerApplication {
+public class AddressBookApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(ServerApplication.class, args);
+        SpringApplication.run(AddressBookApplication.class, args);
     }
-
 }
