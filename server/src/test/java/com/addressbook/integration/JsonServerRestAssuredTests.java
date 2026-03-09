@@ -14,7 +14,6 @@ import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 
@@ -24,9 +23,7 @@ class JsonServerRestAssuredTests {
     @LocalServerPort
     private int port;
 
-    @Autowired
-    private ObjectMapper objectMapper;
-
+    private final ObjectMapper objectMapper = new ObjectMapper();
     private String jsonServerUrl;
 
     @BeforeEach

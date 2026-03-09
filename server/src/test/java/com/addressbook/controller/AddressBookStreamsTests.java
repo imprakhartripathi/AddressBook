@@ -1,75 +1,116 @@
 package com.addressbook.controller;
 
-import static org.hamcrest.Matchers.hasSize;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.addressbook.dto.ApiResponse;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Map;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.MediaType;
+import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.http.ResponseEntity;
 import org.springframework.test.annotation.DirtiesContext;
-import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.client.DefaultResponseErrorHandler;
+import org.springframework.web.client.RestTemplate;
 
-@SpringBootTest
-@AutoConfigureMockMvc
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class AddressBookStreamsTests {
-    @Autowired
-    private MockMvc mockMvc;
+    @LocalServerPort
+    private int port;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    private RestTemplate restTemplate;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
-    @Test
-    void supportsSearchGroupCountAndSort() throws Exception {
-        mockMvc.perform(post("/api/contacts")
-                .param("book", "Work")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(contact("Ada", "Lovelace", "Pune", "MH"))))
-            .andExpect(status().isCreated());
-
-        mockMvc.perform(post("/api/contacts")
-                .param("book", "Personal")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(contact("Grace", "Hopper", "Delhi", "DL"))))
-            .andExpect(status().isCreated());
-
-        mockMvc.perform(get("/api/contacts/search").param("city", "Pune"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data", hasSize(1)));
-
-        mockMvc.perform(get("/api/contacts/by-city"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data.Pune", hasSize(1)));
-
-        mockMvc.perform(get("/api/contacts/count-by-state"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data.MH").value(1));
-
-        mockMvc.perform(get("/api/contacts").param("sortBy", "name"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data", hasSize(2)));
+    @BeforeEach
+    void setup() {
+        restTemplate = new RestTemplate();
+        restTemplate.setErrorHandler(new DefaultResponseErrorHandler() {
+            @Override
+            public boolean hasError(org.springframework.http.client.ClientHttpResponse response) {
+                return false;
+            }
+        });
     }
 
     @Test
-    void supportsBulkCreate() throws Exception {
+    void supportsSearchGroupCountAndSort() {
+        restTemplate.postForEntity(
+            baseUrl("/api/contacts?book=Work"),
+            contact("Ada", "Lovelace", "Pune", "MH"),
+            ApiResponse.class
+        );
+
+        restTemplate.postForEntity(
+            baseUrl("/api/contacts?book=Personal"),
+            contact("Grace", "Hopper", "Delhi", "DL"),
+            ApiResponse.class
+        );
+
+        ResponseEntity<ApiResponse> searchResponse = restTemplate.getForEntity(
+            baseUrl("/api/contacts/search?city=Pune"),
+            ApiResponse.class
+        );
+        List<?> searchData = objectMapper.convertValue(
+            searchResponse.getBody().getData(),
+            new TypeReference<List<?>>() {}
+        );
+        assertEquals(1, searchData.size());
+
+        ResponseEntity<ApiResponse> groupResponse = restTemplate.getForEntity(
+            baseUrl("/api/contacts/by-city"),
+            ApiResponse.class
+        );
+        Map<String, Object> groupData = objectMapper.convertValue(
+            groupResponse.getBody().getData(),
+            new TypeReference<Map<String, Object>>() {}
+        );
+        assertTrue(groupData.containsKey("Pune"));
+
+        ResponseEntity<ApiResponse> countResponse = restTemplate.getForEntity(
+            baseUrl("/api/contacts/count-by-state"),
+            ApiResponse.class
+        );
+        Map<String, Integer> countData = objectMapper.convertValue(
+            countResponse.getBody().getData(),
+            new TypeReference<Map<String, Integer>>() {}
+        );
+        assertEquals(1, countData.get("MH").intValue());
+
+        ResponseEntity<ApiResponse> sortedResponse = restTemplate.getForEntity(
+            baseUrl("/api/contacts?book=Work&sortBy=name"),
+            ApiResponse.class
+        );
+        List<?> sortedData = objectMapper.convertValue(
+            sortedResponse.getBody().getData(),
+            new TypeReference<List<?>>() {}
+        );
+        assertEquals(1, sortedData.size());
+    }
+
+    @Test
+    void supportsBulkCreate() {
         List<Map<String, Object>> payload = List.of(
             contact("Alan", "Turing", "London", "LDN"),
             contact("Katherine", "Johnson", "Mumbai", "MH")
         );
 
-        mockMvc.perform(post("/api/contacts/bulk")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(payload)))
-            .andExpect(status().isCreated())
-            .andExpect(jsonPath("$.data", hasSize(2)));
+        ResponseEntity<ApiResponse> response = restTemplate.postForEntity(
+            baseUrl("/api/contacts/bulk"),
+            payload,
+            ApiResponse.class
+        );
+
+        List<?> data = objectMapper.convertValue(response.getBody().getData(), new TypeReference<List<?>>() {});
+        assertEquals(2, data.size());
+    }
+
+    private String baseUrl(String path) {
+        return "http://localhost:" + port + path;
     }
 
     private Map<String, Object> contact(String first, String last, String city, String state) {

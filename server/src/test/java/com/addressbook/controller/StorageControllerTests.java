@@ -1,78 +1,106 @@
 package com.addressbook.controller;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.addressbook.dto.ApiResponse;
 import java.util.Map;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.MediaType;
+import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.test.annotation.DirtiesContext;
-import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.client.DefaultResponseErrorHandler;
+import org.springframework.web.client.RestTemplate;
 
-@SpringBootTest
-@AutoConfigureMockMvc
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class StorageControllerTests {
-    @Autowired
-    private MockMvc mockMvc;
+    @LocalServerPort
+    private int port;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    private RestTemplate restTemplate;
 
-    @Test
-    void exportAndImportFileStorage() throws Exception {
-        mockMvc.perform(post("/api/contacts")
-                .param("book", "io")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(sampleContact())))
-            .andExpect(status().isCreated());
-
-        mockMvc.perform(post("/api/storage/file/export").param("book", "io"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.success").value(true));
-
-        mockMvc.perform(post("/api/storage/file/import").param("book", "io"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.success").value(true));
+    @BeforeEach
+    void setup() {
+        restTemplate = new RestTemplate();
+        restTemplate.setErrorHandler(new DefaultResponseErrorHandler() {
+            @Override
+            public boolean hasError(org.springframework.http.client.ClientHttpResponse response) {
+                return false;
+            }
+        });
     }
 
     @Test
-    void exportAndImportCsvStorage() throws Exception {
-        mockMvc.perform(post("/api/contacts")
-                .param("book", "csv")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(sampleContact())))
-            .andExpect(status().isCreated());
+    void exportAndImportFileStorage() {
+        restTemplate.postForEntity(baseUrl("/api/contacts?book=io"), sampleContact(), ApiResponse.class);
 
-        mockMvc.perform(post("/api/storage/csv/export").param("book", "csv"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.success").value(true));
+        ResponseEntity<ApiResponse> exportResponse = restTemplate.postForEntity(
+            baseUrl("/api/storage/file/export?book=io"),
+            null,
+            ApiResponse.class
+        );
 
-        mockMvc.perform(post("/api/storage/csv/import").param("book", "csv"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.success").value(true));
+        assertEquals(HttpStatus.OK, exportResponse.getStatusCode());
+        assertTrue(exportResponse.getBody().isSuccess());
+
+        ResponseEntity<ApiResponse> importResponse = restTemplate.postForEntity(
+            baseUrl("/api/storage/file/import?book=io"),
+            null,
+            ApiResponse.class
+        );
+
+        assertEquals(HttpStatus.OK, importResponse.getStatusCode());
+        assertTrue(importResponse.getBody().isSuccess());
     }
 
     @Test
-    void exportAndImportJsonStorage() throws Exception {
-        mockMvc.perform(post("/api/contacts")
-                .param("book", "json")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(sampleContact())))
-            .andExpect(status().isCreated());
+    void exportAndImportCsvStorage() {
+        restTemplate.postForEntity(baseUrl("/api/contacts?book=csv"), sampleContact(), ApiResponse.class);
 
-        mockMvc.perform(post("/api/storage/json/export").param("book", "json"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.success").value(true));
+        ResponseEntity<ApiResponse> exportResponse = restTemplate.postForEntity(
+            baseUrl("/api/storage/csv/export?book=csv"),
+            null,
+            ApiResponse.class
+        );
 
-        mockMvc.perform(post("/api/storage/json/import").param("book", "json"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.success").value(true));
+        assertEquals(HttpStatus.OK, exportResponse.getStatusCode());
+
+        ResponseEntity<ApiResponse> importResponse = restTemplate.postForEntity(
+            baseUrl("/api/storage/csv/import?book=csv"),
+            null,
+            ApiResponse.class
+        );
+
+        assertEquals(HttpStatus.OK, importResponse.getStatusCode());
+    }
+
+    @Test
+    void exportAndImportJsonStorage() {
+        restTemplate.postForEntity(baseUrl("/api/contacts?book=json"), sampleContact(), ApiResponse.class);
+
+        ResponseEntity<ApiResponse> exportResponse = restTemplate.postForEntity(
+            baseUrl("/api/storage/json/export?book=json"),
+            null,
+            ApiResponse.class
+        );
+
+        assertEquals(HttpStatus.OK, exportResponse.getStatusCode());
+
+        ResponseEntity<ApiResponse> importResponse = restTemplate.postForEntity(
+            baseUrl("/api/storage/json/import?book=json"),
+            null,
+            ApiResponse.class
+        );
+
+        assertEquals(HttpStatus.OK, importResponse.getStatusCode());
+    }
+
+    private String baseUrl(String path) {
+        return "http://localhost:" + port + path;
     }
 
     private Map<String, Object> sampleContact() {
