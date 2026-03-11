@@ -5,7 +5,6 @@ import {
   deleteContact,
   getAddressBooks,
   getContacts,
-  searchContacts,
   updateContact,
 } from '../services'
 import { exportContacts } from '../utils/exportContacts'
@@ -19,6 +18,23 @@ type SortOption = 'name' | 'city' | 'state' | 'zip'
 
 const defaultBook = 'default'
 
+function compareContacts(a: Contact, b: Contact, sortBy: SortOption) {
+  const getName = (c: Contact) => `${c.firstName ?? ''} ${c.lastName ?? ''}`.trim().toLowerCase()
+  const getValue = (c: Contact) => {
+    switch (sortBy) {
+      case 'city':
+        return (c.city ?? '').toLowerCase()
+      case 'state':
+        return (c.state ?? '').toLowerCase()
+      case 'zip':
+        return (c.zip ?? '').toLowerCase()
+      default:
+        return getName(c)
+    }
+  }
+  return getValue(a).localeCompare(getValue(b))
+}
+
 export default function ContactsPage() {
   const [contacts, setContacts] = useState<Contact[]>([])
   const [addressBooks, setAddressBooks] = useState<string[]>([])
@@ -27,6 +43,7 @@ export default function ContactsPage() {
   const [searchCity, setSearchCity] = useState('')
   const [searchState, setSearchState] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [formMode, setFormMode] = useState<FormMode>('create')
@@ -34,12 +51,24 @@ export default function ContactsPage() {
 
   const modalTitle = useMemo(() => (formMode === 'edit' ? 'Edit Contact' : 'Add Contact'), [formMode])
 
+  const filteredContacts = useMemo(() => {
+    const city = searchCity.trim().toLowerCase()
+    const state = searchState.trim().toLowerCase()
+    return [...contacts]
+      .filter((contact) => {
+        const cityMatch = city ? (contact.city ?? '').toLowerCase().includes(city) : true
+        const stateMatch = state ? (contact.state ?? '').toLowerCase().includes(state) : true
+        return cityMatch && stateMatch
+      })
+      .sort((a, b) => compareContacts(a, b, sortBy))
+  }, [contacts, searchCity, searchState, sortBy])
+
   const loadBooks = async () => {
     try {
       const response = await getAddressBooks()
       const payload = response.data as ApiResponse<string[]>
       const books = payload.data || []
-      setAddressBooks(books)
+      setAddressBooks(books.length ? books : [defaultBook])
       if (!books.includes(selectedBook)) {
         setSelectedBook(books[0] || defaultBook)
       }
@@ -52,11 +81,12 @@ export default function ContactsPage() {
     setIsLoading(true)
     setError(null)
     try {
-      const response = await getContacts({ book: selectedBook, sortBy })
+      const response = await getContacts({ book: selectedBook })
       const payload = response.data as ApiResponse<Contact[]>
       setContacts(payload.data || [])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to load contacts')
+      setContacts([])
     } finally {
       setIsLoading(false)
     }
@@ -68,31 +98,7 @@ export default function ContactsPage() {
 
   useEffect(() => {
     loadContacts()
-  }, [selectedBook, sortBy])
-
-  const handleSearch = async () => {
-    if (!searchCity.trim() && !searchState.trim()) {
-      await loadContacts()
-      return
-    }
-    setIsLoading(true)
-    setError(null)
-    try {
-      const response = await searchContacts({
-        city: searchCity.trim() || undefined,
-        state: searchState.trim() || undefined,
-      })
-      const payload = response.data as ApiResponse<Array<{ contact: Contact; addressBook: string }>>
-      const filtered = (payload.data || [])
-        .filter((entry) => entry.addressBook === selectedBook)
-        .map((entry) => entry.contact)
-      setContacts(filtered)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Search failed')
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  }, [selectedBook])
 
   const handleAddClick = () => {
     setFormMode('create')
@@ -111,20 +117,23 @@ export default function ContactsPage() {
     if (!confirmed) {
       return
     }
+    setIsSubmitting(true)
     try {
-      await deleteContact(contact.id, selectedBook)
+      await deleteContact(contact.id)
       await loadContacts()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to delete contact')
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
   const handleSubmit = async (payload: Omit<Contact, 'id'>) => {
-    setIsLoading(true)
+    setIsSubmitting(true)
     setError(null)
     try {
       if (formMode === 'edit' && activeContact) {
-        await updateContact(activeContact.id, payload, selectedBook)
+        await updateContact(activeContact.id, payload)
       } else {
         await createContact(payload, selectedBook)
       }
@@ -134,34 +143,39 @@ export default function ContactsPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to save contact')
     } finally {
-      setIsLoading(false)
+      setIsSubmitting(false)
     }
   }
+
+  const disableActions = isLoading || isSubmitting
 
   return (
     <section className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">Contacts</h1>
-          <p className="text-sm text-slate-500">Book-aware CRUD with search and sort.</p>
+          <p className="text-sm text-slate-500">DB-first CRUD for multiple address books.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button onClick={handleAddClick}>Add Contact</Button>
+          <Button onClick={handleAddClick} disabled={disableActions}>Add Contact</Button>
           <Button
-            onClick={() => exportContacts(contacts, selectedBook, 'json')}
+            onClick={() => exportContacts(filteredContacts, selectedBook, 'json')}
             className="bg-slate-700 hover:bg-slate-600"
+            disabled={disableActions || filteredContacts.length === 0}
           >
             Export JSON
           </Button>
           <Button
-            onClick={() => exportContacts(contacts, selectedBook, 'txt')}
+            onClick={() => exportContacts(filteredContacts, selectedBook, 'txt')}
             className="bg-slate-700 hover:bg-slate-600"
+            disabled={disableActions || filteredContacts.length === 0}
           >
             Export TXT
           </Button>
           <Button
-            onClick={() => exportContacts(contacts, selectedBook, 'pdf')}
+            onClick={() => exportContacts(filteredContacts, selectedBook, 'pdf')}
             className="bg-slate-700 hover:bg-slate-600"
+            disabled={disableActions || filteredContacts.length === 0}
           >
             Export PDF
           </Button>
@@ -175,6 +189,7 @@ export default function ContactsPage() {
             value={selectedBook}
             onChange={(event) => setSelectedBook(event.target.value)}
             className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            disabled={disableActions}
           >
             {(addressBooks.length ? addressBooks : [defaultBook]).map((book) => (
               <option key={book} value={book}>
@@ -189,6 +204,7 @@ export default function ContactsPage() {
             value={sortBy}
             onChange={(event) => setSortBy(event.target.value as SortOption)}
             className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            disabled={disableActions}
           >
             <option value="name">Name</option>
             <option value="city">City</option>
@@ -198,21 +214,30 @@ export default function ContactsPage() {
         </div>
         <div className="space-y-1">
           <label className="text-xs font-medium uppercase text-slate-500">Search City</label>
-          <Input value={searchCity} onChange={(event) => setSearchCity(event.target.value)} placeholder="City" />
+          <Input
+            value={searchCity}
+            onChange={(event) => setSearchCity(event.target.value)}
+            placeholder="City"
+            disabled={disableActions}
+          />
         </div>
         <div className="space-y-1">
           <label className="text-xs font-medium uppercase text-slate-500">Search State</label>
-          <Input value={searchState} onChange={(event) => setSearchState(event.target.value)} placeholder="State" />
+          <Input
+            value={searchState}
+            onChange={(event) => setSearchState(event.target.value)}
+            placeholder="State"
+            disabled={disableActions}
+          />
         </div>
         <div className="flex items-end gap-2">
-          <Button onClick={handleSearch} className="w-full">Search</Button>
           <Button
             onClick={() => {
               setSearchCity('')
               setSearchState('')
-              loadContacts()
             }}
             className="w-full bg-slate-200 text-slate-700 hover:bg-slate-300"
+            disabled={disableActions}
           >
             Reset
           </Button>
@@ -230,7 +255,7 @@ export default function ContactsPage() {
           Loading contacts...
         </div>
       ) : (
-        <ContactTable contacts={contacts} onEdit={handleEdit} onDelete={handleDelete} />
+        <ContactTable contacts={filteredContacts} onEdit={handleEdit} onDelete={handleDelete} />
       )}
 
       {isModalOpen && (
@@ -242,6 +267,7 @@ export default function ContactsPage() {
                 type="button"
                 onClick={() => setIsModalOpen(false)}
                 className="text-sm text-slate-500 hover:text-slate-700"
+                disabled={isSubmitting}
               >
                 Close
               </button>
@@ -251,7 +277,7 @@ export default function ContactsPage() {
                 initialContact={activeContact}
                 onSubmit={handleSubmit}
                 onCancel={() => setIsModalOpen(false)}
-                loading={isLoading}
+                loading={isSubmitting}
               />
             </div>
           </div>

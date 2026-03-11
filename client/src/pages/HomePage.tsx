@@ -12,6 +12,7 @@ export default function HomePage() {
   const [status, setStatus] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [creatingBook, setCreatingBook] = useState(false)
 
   const totalContacts = contacts.length
   const recentContacts = useMemo(() => contacts.slice(-5).reverse(), [contacts])
@@ -27,6 +28,8 @@ export default function HomePage() {
       setAddressBooks(booksPayload.data || [])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to load dashboard data')
+      setContacts([])
+      setAddressBooks([])
     } finally {
       setLoading(false)
     }
@@ -41,7 +44,7 @@ export default function HomePage() {
       setError('Address book name is required')
       return
     }
-    setLoading(true)
+    setCreatingBook(true)
     setError(null)
     try {
       await createAddressBook(bookName.trim())
@@ -51,7 +54,7 @@ export default function HomePage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to create address book')
     } finally {
-      setLoading(false)
+      setCreatingBook(false)
     }
   }
 
@@ -61,7 +64,7 @@ export default function HomePage() {
         <p className="text-sm uppercase tracking-wide text-slate-500">AddressBook System</p>
         <h1 className="text-3xl font-semibold text-slate-900">Welcome to Address Book Program</h1>
         <p className="mt-2 text-slate-600">
-          Manage contact records across multiple address books.
+          DB-first address books and contacts.
         </p>
       </div>
 
@@ -109,7 +112,7 @@ export default function HomePage() {
                       </p>
                       <p className="text-slate-500">{contact.email}</p>
                     </div>
-                    <div className="text-slate-500">{contact.city}</div>
+                    <div className="text-slate-500">{contact.city ?? '-'}</div>
                   </div>
                 ))}
               </div>
@@ -125,9 +128,10 @@ export default function HomePage() {
                 value={bookName}
                 onChange={(event) => setBookName(event.target.value)}
                 placeholder="Address book name"
+                disabled={loading || creatingBook}
               />
-              <Button onClick={handleCreateAddressBook} disabled={loading}>
-                Add Address Book
+              <Button onClick={handleCreateAddressBook} disabled={loading || creatingBook}>
+                {creatingBook ? 'Creating...' : 'Add Address Book'}
               </Button>
             </div>
           </Card>

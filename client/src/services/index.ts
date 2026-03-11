@@ -4,9 +4,6 @@ export {
   createContact,
   updateContact,
   deleteContact,
-  searchContacts,
-  getCountsByCity,
-  getCountsByState,
   createBulkContacts,
 } from './contactService'
 

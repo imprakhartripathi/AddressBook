@@ -31,4 +31,8 @@ public interface DatabaseContactService {
     List<Contact> syncDatabaseToMemory(String bookName);
 
     Map<String, Long> syncCheck(Long id);
+
+    List<String> getAddressBooks();
+
+    void createAddressBook(String name);
 }

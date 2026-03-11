@@ -7,6 +7,7 @@ import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -31,6 +32,30 @@ public class JdbcContactRepository {
             ORDER BY id ASC
             """;
         return jdbcTemplate.query(sql, Map.of("bookName", bookName), CONTACT_ROW_MAPPER);
+    }
+
+    public List<String> findAllAddressBooks() {
+        String sql = """
+            SELECT name FROM address_books
+            UNION
+            SELECT DISTINCT book_name AS name FROM contacts
+            ORDER BY name
+            """;
+        return jdbcTemplate.query(sql, Map.of(), (rs, rowNum) -> rs.getString("name"));
+    }
+
+    public void createAddressBook(String name) {
+        String existsSql = "SELECT COUNT(*) FROM address_books WHERE name = :name";
+        Long exists = jdbcTemplate.queryForObject(existsSql, Map.of("name", name), Long.class);
+        if (exists != null && exists > 0) {
+            return;
+        }
+        String insertSql = "INSERT INTO address_books (name) VALUES (:name)";
+        try {
+            jdbcTemplate.update(insertSql, Map.of("name", name));
+        } catch (DataIntegrityViolationException ignored) {
+            // Concurrent inserts can race; duplicate key means the row already exists.
+        }
     }
 
     public Contact findById(Long id) {

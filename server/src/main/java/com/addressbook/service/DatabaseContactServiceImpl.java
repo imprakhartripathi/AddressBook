@@ -52,8 +52,10 @@ public class DatabaseContactServiceImpl implements DatabaseContactService {
     @Transactional
     public Contact createContact(String bookName, Contact contact) {
         validateContact(contact);
+        String resolvedBook = resolveBookName(bookName);
+        jdbcContactRepository.createAddressBook(resolvedBook);
         Contact toCreate = copyContact(contact);
-        return jdbcContactRepository.insert(resolveBookName(bookName), toCreate);
+        return jdbcContactRepository.insert(resolvedBook, toCreate);
     }
 
     @Override
@@ -159,6 +161,19 @@ public class DatabaseContactServiceImpl implements DatabaseContactService {
         result.put("memoryId", memoryContact.getId());
         result.put("inSync", inSync ? 1L : 0L);
         return result;
+    }
+
+    @Override
+    public List<String> getAddressBooks() {
+        return jdbcContactRepository.findAllAddressBooks();
+    }
+
+    @Override
+    public void createAddressBook(String name) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("Address book name is required");
+        }
+        jdbcContactRepository.createAddressBook(name.trim());
     }
 
     private String resolveBookName(String bookName) {
