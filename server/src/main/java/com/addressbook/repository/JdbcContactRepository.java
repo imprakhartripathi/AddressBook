@@ -31,7 +31,8 @@ public class JdbcContactRepository {
             WHERE (:bookName IS NULL OR book_name = :bookName)
             ORDER BY id ASC
             """;
-        return jdbcTemplate.query(sql, Map.of("bookName", bookName), CONTACT_ROW_MAPPER);
+        MapSqlParameterSource params = new MapSqlParameterSource().addValue("bookName", bookName);
+        return jdbcTemplate.query(sql, params, CONTACT_ROW_MAPPER);
     }
 
     public List<String> findAllAddressBooks() {
