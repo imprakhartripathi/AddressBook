@@ -11,7 +11,7 @@ type ContactTableProps = {
 export default function ContactTable({ contacts, onEdit, onDelete }: ContactTableProps) {
   if (contacts.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-slate-200 bg-white p-10 text-center text-slate-500">
+      <div className="rounded-2xl border border-dashed border-slate-300 bg-white/80 p-10 text-center text-slate-500 shadow-[0_10px_30px_rgba(15,23,42,0.05)] backdrop-blur">
         No contacts yet. Add your first contact to get started.
       </div>
     )
@@ -30,9 +30,9 @@ export default function ContactTable({ contacts, onEdit, onDelete }: ContactTabl
         ))}
       </div>
 
-      <div className="hidden overflow-hidden rounded-lg border border-slate-200 bg-white md:block">
+      <div className="hidden overflow-hidden rounded-2xl border border-white/60 bg-white/90 shadow-[0_10px_30px_rgba(15,23,42,0.06)] backdrop-blur md:block">
         <table className="min-w-full text-left text-sm">
-          <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+          <thead className="bg-slate-50/80 text-xs uppercase tracking-wide text-slate-500">
             <tr>
               <th className="px-4 py-3">Name</th>
               <th className="px-4 py-3">Email</th>
@@ -41,9 +41,9 @@ export default function ContactTable({ contacts, onEdit, onDelete }: ContactTabl
               <th className="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-200">
+          <tbody className="divide-y divide-slate-100">
             {contacts.map((contact) => (
-              <tr key={contact.id} className="hover:bg-slate-50">
+              <tr key={contact.id} className="transition hover:bg-slate-50/80">
                 <td className="px-4 py-3 font-medium text-slate-900">
                   {contact.firstName} {contact.lastName}
                 </td>

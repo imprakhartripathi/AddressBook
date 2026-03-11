@@ -12,13 +12,13 @@ export default function ContactCard({ contact, onEdit, onDelete }: ContactCardPr
   return (
     <Card className="space-y-4">
       <div>
-        <p className="text-lg font-semibold text-slate-900">
+        <p className="text-lg font-bold text-slate-900">
           {contact.firstName} {contact.lastName}
         </p>
         <p className="text-sm text-slate-500">{contact.email}</p>
         <p className="text-sm text-slate-500">{contact.phone}</p>
       </div>
-      <div className="text-sm text-slate-600">
+      <div className="rounded-xl border border-slate-100 bg-white/70 p-3 text-sm text-slate-600">
         <p>{contact.address}</p>
         <p>
           {contact.city}, {contact.state} {contact.zip}

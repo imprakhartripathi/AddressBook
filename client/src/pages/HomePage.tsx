@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { motion } from 'framer-motion'
 import type { ApiResponse, Contact } from '../types'
 import { createAddressBook, getAddressBooks, getContacts } from '../services'
 import Button from '../components/ui/Button'
@@ -59,12 +60,17 @@ export default function HomePage() {
   }
 
   return (
-    <section className="space-y-6">
-      <div>
-        <p className="text-sm uppercase tracking-wide text-slate-500">AddressBook System</p>
-        <h1 className="text-3xl font-semibold text-slate-900">Welcome to Address Book Program</h1>
+    <motion.section
+      className="space-y-6"
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: 'easeOut' }}
+    >
+      <div className="rounded-2xl border border-white/60 bg-white/80 p-6 shadow-[0_10px_30px_rgba(15,23,42,0.06)] backdrop-blur">
+        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-sky-600">AddressBook System</p>
+        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">Welcome to Address Book Program</h1>
         <p className="mt-2 text-slate-600">
-          DB-first address books and contacts.
+          Home Page - Overview
         </p>
       </div>
 
@@ -85,11 +91,11 @@ export default function HomePage() {
           <div className="grid gap-4 sm:grid-cols-2">
             <Card className="space-y-2">
               <p className="text-sm text-slate-500">Total Contacts</p>
-              <p className="text-3xl font-semibold text-slate-900">{totalContacts}</p>
+              <p className="text-3xl font-extrabold text-slate-900">{totalContacts}</p>
             </Card>
             <Card className="space-y-2">
               <p className="text-sm text-slate-500">Address Books</p>
-              <p className="text-3xl font-semibold text-slate-900">{addressBooks.length}</p>
+              <p className="text-3xl font-extrabold text-slate-900">{addressBooks.length}</p>
             </Card>
           </div>
 
@@ -105,7 +111,7 @@ export default function HomePage() {
             ) : (
               <div className="space-y-3">
                 {recentContacts.map((contact) => (
-                  <div key={contact.id} className="flex items-center justify-between text-sm">
+                  <div key={contact.id} className="flex items-center justify-between rounded-xl border border-slate-100 bg-white/70 px-3 py-2 text-sm">
                     <div>
                       <p className="font-medium text-slate-900">
                         {contact.firstName} {contact.lastName}
@@ -145,7 +151,7 @@ export default function HomePage() {
             ) : (
               <ul className="space-y-2 text-sm text-slate-700">
                 {addressBooks.map((book) => (
-                  <li key={book} className="rounded-md border border-slate-200 px-3 py-2">
+                  <li key={book} className="rounded-xl border border-slate-200 bg-white/70 px-3 py-2">
                     {book}
                   </li>
                 ))}
@@ -154,6 +160,6 @@ export default function HomePage() {
           </Card>
         </div>
       </div>
-    </section>
+    </motion.section>
   )
 }
