@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS contacts (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     book_name VARCHAR(120) NOT NULL,
     first_name VARCHAR(120),
     last_name VARCHAR(120),

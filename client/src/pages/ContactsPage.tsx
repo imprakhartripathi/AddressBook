@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import type { ApiResponse, Contact } from '../types'
 import {
   createContact,
+  dbSyncFromMemory,
+  dbSyncToMemory,
   deleteContact,
   getAddressBooks,
   getContacts,
@@ -51,6 +53,7 @@ export default function ContactsPage() {
     setIsLoading(true)
     setError(null)
     try {
+      await dbSyncToMemory(selectedBook)
       const response = await getContacts({ book: selectedBook, sortBy })
       const payload = response.data as ApiResponse<Contact[]>
       setContacts(payload.data || [])
@@ -112,6 +115,7 @@ export default function ContactsPage() {
     }
     try {
       await deleteContact(contact.id, selectedBook)
+      await dbSyncFromMemory(selectedBook)
       await loadContacts()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to delete contact')
@@ -127,6 +131,7 @@ export default function ContactsPage() {
       } else {
         await createContact(payload, selectedBook)
       }
+      await dbSyncFromMemory(selectedBook)
       setIsModalOpen(false)
       setActiveContact(null)
       await loadContacts()

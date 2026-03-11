@@ -2,14 +2,10 @@ spring:
   application:
     name: server
   datasource:
-    url: jdbc:h2:file:./data/addressbookdb;DB_CLOSE_ON_EXIT=FALSE
-    username: sa
-    password:
-    driver-class-name: org.h2.Driver
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
+    url: ${AB_DB_URL:jdbc:postgresql://localhost:5432/addressbook}
+    username: ${AB_DB_USERNAME:addressbook_user}
+    password: ${AB_DB_PASSWORD:change_me}
+    driver-class-name: org.postgresql.Driver
   sql:
     init:
       mode: always
