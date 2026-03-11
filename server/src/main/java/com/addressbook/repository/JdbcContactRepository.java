@@ -26,13 +26,20 @@ public class JdbcContactRepository {
     }
 
     public List<Contact> findAll(String bookName) {
+        if (bookName == null || bookName.isBlank()) {
+            String sql = """
+                SELECT * FROM contacts
+                ORDER BY id ASC
+                """;
+            return jdbcTemplate.query(sql, Map.of(), CONTACT_ROW_MAPPER);
+        }
+
         String sql = """
             SELECT * FROM contacts
-            WHERE (:bookName IS NULL OR book_name = :bookName)
+            WHERE book_name = :bookName
             ORDER BY id ASC
             """;
-        MapSqlParameterSource params = new MapSqlParameterSource().addValue("bookName", bookName);
-        return jdbcTemplate.query(sql, params, CONTACT_ROW_MAPPER);
+        return jdbcTemplate.query(sql, Map.of("bookName", bookName), CONTACT_ROW_MAPPER);
     }
 
     public List<String> findAllAddressBooks() {
