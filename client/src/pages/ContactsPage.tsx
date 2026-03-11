@@ -2,14 +2,13 @@ import { useEffect, useMemo, useState } from 'react'
 import type { ApiResponse, Contact } from '../types'
 import {
   createContact,
-  dbSyncFromMemory,
-  dbSyncToMemory,
   deleteContact,
   getAddressBooks,
   getContacts,
   searchContacts,
   updateContact,
 } from '../services'
+import { exportContacts } from '../utils/exportContacts'
 import ContactTable from '../components/contacts/ContactTable'
 import ContactForm from '../components/contacts/ContactForm'
 import Button from '../components/ui/Button'
@@ -53,7 +52,6 @@ export default function ContactsPage() {
     setIsLoading(true)
     setError(null)
     try {
-      await dbSyncToMemory(selectedBook)
       const response = await getContacts({ book: selectedBook, sortBy })
       const payload = response.data as ApiResponse<Contact[]>
       setContacts(payload.data || [])
@@ -115,7 +113,6 @@ export default function ContactsPage() {
     }
     try {
       await deleteContact(contact.id, selectedBook)
-      await dbSyncFromMemory(selectedBook)
       await loadContacts()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to delete contact')
@@ -131,7 +128,6 @@ export default function ContactsPage() {
       } else {
         await createContact(payload, selectedBook)
       }
-      await dbSyncFromMemory(selectedBook)
       setIsModalOpen(false)
       setActiveContact(null)
       await loadContacts()
@@ -149,7 +145,27 @@ export default function ContactsPage() {
           <h1 className="text-2xl font-semibold text-slate-900">Contacts</h1>
           <p className="text-sm text-slate-500">Book-aware CRUD with search and sort.</p>
         </div>
-        <Button onClick={handleAddClick}>Add Contact</Button>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={handleAddClick}>Add Contact</Button>
+          <Button
+            onClick={() => exportContacts(contacts, selectedBook, 'json')}
+            className="bg-slate-700 hover:bg-slate-600"
+          >
+            Export JSON
+          </Button>
+          <Button
+            onClick={() => exportContacts(contacts, selectedBook, 'txt')}
+            className="bg-slate-700 hover:bg-slate-600"
+          >
+            Export TXT
+          </Button>
+          <Button
+            onClick={() => exportContacts(contacts, selectedBook, 'pdf')}
+            className="bg-slate-700 hover:bg-slate-600"
+          >
+            Export PDF
+          </Button>
+        </div>
       </header>
 
       <div className="grid gap-3 rounded-lg border border-slate-200 bg-white p-4 md:grid-cols-5">

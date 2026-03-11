@@ -1,16 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { ApiResponse, Contact } from '../types'
-import {
-  createAddressBook,
-  exportCsv,
-  exportFile,
-  exportJson,
-  getAddressBooks,
-  getContacts,
-  importCsv,
-  importFile,
-  importJson,
-} from '../services'
+import { createAddressBook, getAddressBooks, getContacts } from '../services'
 import Button from '../components/ui/Button'
 import Card from '../components/ui/Card'
 import Input from '../components/ui/Input'
@@ -30,10 +20,7 @@ export default function HomePage() {
     setLoading(true)
     setError(null)
     try {
-      const [contactsResponse, booksResponse] = await Promise.all([
-        getContacts(),
-        getAddressBooks(),
-      ])
+      const [contactsResponse, booksResponse] = await Promise.all([getContacts(), getAddressBooks()])
       const contactsPayload = contactsResponse.data as ApiResponse<Contact[]>
       const booksPayload = booksResponse.data as ApiResponse<string[]>
       setContacts(contactsPayload.data || [])
@@ -68,27 +55,13 @@ export default function HomePage() {
     }
   }
 
-  const handleStorageAction = async (action: () => Promise<unknown>, label: string) => {
-    setLoading(true)
-    setError(null)
-    try {
-      await action()
-      setStatus(label)
-      await loadDashboard()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Storage operation failed')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   return (
     <section className="space-y-6">
       <div>
         <p className="text-sm uppercase tracking-wide text-slate-500">AddressBook System</p>
         <h1 className="text-3xl font-semibold text-slate-900">Welcome to Address Book Program</h1>
         <p className="mt-2 text-slate-600">
-          Manage contacts, organize address books, and sync data to file, CSV, or JSON.
+          Manage contact records across multiple address books.
         </p>
       </div>
 
@@ -141,33 +114,6 @@ export default function HomePage() {
                 ))}
               </div>
             )}
-          </Card>
-
-          <Card className="space-y-4">
-            <h2 className="text-lg font-semibold text-slate-900">Storage Actions</h2>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <Button onClick={() => handleStorageAction(exportFile, 'File export completed')}>
-                Export File
-              </Button>
-              <Button onClick={() => handleStorageAction(importFile, 'File import completed')}>
-                Import File
-              </Button>
-              <Button onClick={() => handleStorageAction(exportCsv, 'CSV export completed')}>
-                Export CSV
-              </Button>
-              <Button onClick={() => handleStorageAction(importCsv, 'CSV import completed')}>
-                Import CSV
-              </Button>
-              <Button onClick={() => handleStorageAction(exportJson, 'JSON export completed')}>
-                Export JSON
-              </Button>
-              <Button onClick={() => handleStorageAction(importJson, 'JSON import completed')}>
-                Import JSON
-              </Button>
-            </div>
-            <p className="text-xs text-slate-500">
-              Storage actions apply to the default address book for now.
-            </p>
           </Card>
         </div>
 
