@@ -4,17 +4,22 @@ import Card from '../ui/Card'
 
 type ContactCardProps = {
   contact: Contact
+  onView: (contact: Contact) => void
   onEdit: (contact: Contact) => void
   onDelete: (contact: Contact) => void
 }
 
-export default function ContactCard({ contact, onEdit, onDelete }: ContactCardProps) {
+export default function ContactCard({ contact, onView, onEdit, onDelete }: ContactCardProps) {
   return (
     <Card className="space-y-4">
       <div>
-        <p className="text-lg font-bold text-slate-900">
+        <button
+          type="button"
+          onClick={() => onView(contact)}
+          className="text-left text-lg font-bold text-slate-900 transition hover:text-sky-700"
+        >
           {contact.firstName} {contact.lastName}
-        </p>
+        </button>
         <p className="text-sm text-slate-500">{contact.email}</p>
         <p className="text-sm text-slate-500">{contact.phone}</p>
       </div>

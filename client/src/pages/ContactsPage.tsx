@@ -47,8 +47,10 @@ export default function ContactsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
   const [formMode, setFormMode] = useState<FormMode>('create')
   const [activeContact, setActiveContact] = useState<Contact | null>(null)
+  const [detailsContact, setDetailsContact] = useState<Contact | null>(null)
 
   const modalTitle = useMemo(() => (formMode === 'edit' ? 'Edit Contact' : 'Add Contact'), [formMode])
 
@@ -111,6 +113,11 @@ export default function ContactsPage() {
     setFormMode('edit')
     setActiveContact(contact)
     setIsModalOpen(true)
+  }
+
+  const handleView = (contact: Contact) => {
+    setDetailsContact(contact)
+    setIsDetailsModalOpen(true)
   }
 
   const handleDelete = async (contact: Contact) => {
@@ -301,8 +308,81 @@ export default function ContactsPage() {
           Loading contacts...
         </div>
       ) : (
-        <ContactTable contacts={filteredContacts} onEdit={handleEdit} onDelete={handleDelete} />
+        <ContactTable contacts={filteredContacts} onView={handleView} onEdit={handleEdit} onDelete={handleDelete} />
       )}
+
+      <AnimatePresence>
+        {isDetailsModalOpen && detailsContact && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="w-full max-w-xl rounded-2xl border border-white/70 bg-white p-6 shadow-2xl"
+              initial={{ opacity: 0, y: 18, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 12, scale: 0.98 }}
+            >
+              <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+                <h2 className="text-lg font-semibold text-slate-900">Contact Details</h2>
+                <button
+                  type="button"
+                  onClick={() => setIsDetailsModalOpen(false)}
+                  className="text-sm text-slate-500 hover:text-slate-700"
+                >
+                  Close
+                </button>
+              </div>
+              <div className="mt-4 grid gap-4 text-sm">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Name</p>
+                  <p className="text-base font-semibold text-slate-900">
+                    {detailsContact.firstName} {detailsContact.lastName}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Email</p>
+                  <a
+                    href={`mailto:${detailsContact.email}`}
+                    className="text-sky-700 hover:underline"
+                  >
+                    {detailsContact.email}
+                  </a>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Phone</p>
+                  <a
+                    href={`tel:${detailsContact.phone}`}
+                    className="text-sky-700 hover:underline"
+                  >
+                    {detailsContact.phone}
+                  </a>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Address</p>
+                  <p className="text-slate-700">{detailsContact.address || '-'}</p>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.12em] text-slate-500">City</p>
+                    <p className="text-slate-700">{detailsContact.city || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.12em] text-slate-500">State</p>
+                    <p className="text-slate-700">{detailsContact.state || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Zip</p>
+                    <p className="text-slate-700">{detailsContact.zip || '-'}</p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {isModalOpen && (
