@@ -1,12 +1,67 @@
+import { useEffect, useState } from 'react'
 import { Outlet, NavLink } from 'react-router-dom'
+import api from '../../api/axios'
+
+type BackendStatus = 'healthy' | 'slow' | 'down'
 
 export default function AppLayout() {
+  const [backendStatus, setBackendStatus] = useState<BackendStatus>('down')
+  const [responseMs, setResponseMs] = useState<number | null>(null)
+
+  useEffect(() => {
+    let active = true
+
+    const checkBackend = async () => {
+      const startedAt = performance.now()
+      const controller = new AbortController()
+      const timeoutId = window.setTimeout(() => controller.abort(), 5000)
+
+      try {
+        await api.get('/db/address-books', { signal: controller.signal })
+        const elapsed = Math.round(performance.now() - startedAt)
+        if (!active) return
+        setResponseMs(elapsed)
+        setBackendStatus(elapsed > 1200 ? 'slow' : 'healthy')
+      } catch {
+        if (!active) return
+        setResponseMs(null)
+        setBackendStatus('down')
+      } finally {
+        window.clearTimeout(timeoutId)
+      }
+    }
+
+    void checkBackend()
+    const intervalId = window.setInterval(() => {
+      void checkBackend()
+    }, 15000)
+
+    return () => {
+      active = false
+      window.clearInterval(intervalId)
+    }
+  }, [])
+
+  const statusClass =
+    backendStatus === 'healthy'
+      ? 'bg-emerald-500 shadow-[0_0_0_6px_rgba(16,185,129,0.2)]'
+      : backendStatus === 'slow'
+        ? 'bg-amber-400 shadow-[0_0_0_6px_rgba(251,191,36,0.25)]'
+        : 'bg-rose-500 shadow-[0_0_0_6px_rgba(244,63,94,0.2)]'
+
+  const statusLabel =
+    backendStatus === 'healthy'
+      ? `Backend healthy (${responseMs ?? 0}ms)`
+      : backendStatus === 'slow'
+        ? `Backend slow (${responseMs ?? 0}ms)`
+        : 'Backend down'
+
   return (
     <div className="flex min-h-screen flex-col text-slate-900">
       <header className="sticky top-0 z-20 border-b border-white/20 bg-transparent backdrop-blur-sm">
         <div className="flex w-full items-center justify-between px-6 py-4">
           <div className="flex items-center gap-3">
-            <span className="inline-block h-2.5 w-2.5 rounded-full bg-sky-500 shadow-[0_0_0_6px_rgba(14,165,233,0.15)]" />
+            <span className={`inline-block h-2.5 w-2.5 rounded-full ${statusClass}`} title={statusLabel} />
             <div className="text-lg font-extrabold tracking-tight">
               AddressBook App
             </div>
@@ -51,5 +106,5 @@ export default function AppLayout() {
         </div>
       </footer>
     </div>
-  );
+  )
 }
