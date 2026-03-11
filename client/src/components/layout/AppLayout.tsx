@@ -28,6 +28,16 @@ export default function AppLayout() {
             >
               Contacts
             </NavLink>
+            <NavLink
+              to="/integrations"
+              className={({ isActive }) =>
+                `rounded px-2 py-1 ${
+                  isActive ? 'bg-slate-900 text-white' : 'text-slate-700 hover:text-slate-900'
+                }`
+              }
+            >
+              Integrations
+            </NavLink>
           </nav>
         </div>
       </header>

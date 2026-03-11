@@ -8,4 +8,5 @@ export interface Contact {
   zip: string
   phone: string
   email: string
+  dateAdded?: string
 }

@@ -1,8 +1,11 @@
 package com.addressbook.model;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import java.time.LocalDateTime;
 
 @Data
+@EqualsAndHashCode(of = {"firstName", "lastName"})
 public class Contact {
     private Long id;
     private String firstName;
@@ -13,4 +16,5 @@ public class Contact {
     private String zip;
     private String phone;
     private String email;
+    private LocalDateTime dateAdded;
 }

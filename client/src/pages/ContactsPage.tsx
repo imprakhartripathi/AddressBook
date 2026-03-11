@@ -3,19 +3,28 @@ import type { ApiResponse, Contact } from '../types'
 import {
   createContact,
   deleteContact,
+  getAddressBooks,
   getContacts,
+  searchContacts,
   updateContact,
 } from '../services'
 import ContactTable from '../components/contacts/ContactTable'
 import ContactForm from '../components/contacts/ContactForm'
 import Button from '../components/ui/Button'
-
-const emptyContacts: Contact[] = []
+import Input from '../components/ui/Input'
 
 type FormMode = 'create' | 'edit'
+type SortOption = 'name' | 'city' | 'state' | 'zip'
+
+const defaultBook = 'default'
 
 export default function ContactsPage() {
-  const [contacts, setContacts] = useState<Contact[]>(emptyContacts)
+  const [contacts, setContacts] = useState<Contact[]>([])
+  const [addressBooks, setAddressBooks] = useState<string[]>([])
+  const [selectedBook, setSelectedBook] = useState(defaultBook)
+  const [sortBy, setSortBy] = useState<SortOption>('name')
+  const [searchCity, setSearchCity] = useState('')
+  const [searchState, setSearchState] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -24,11 +33,25 @@ export default function ContactsPage() {
 
   const modalTitle = useMemo(() => (formMode === 'edit' ? 'Edit Contact' : 'Add Contact'), [formMode])
 
+  const loadBooks = async () => {
+    try {
+      const response = await getAddressBooks()
+      const payload = response.data as ApiResponse<string[]>
+      const books = payload.data || []
+      setAddressBooks(books)
+      if (!books.includes(selectedBook)) {
+        setSelectedBook(books[0] || defaultBook)
+      }
+    } catch {
+      setAddressBooks([defaultBook])
+    }
+  }
+
   const loadContacts = async () => {
     setIsLoading(true)
     setError(null)
     try {
-      const response = await getContacts()
+      const response = await getContacts({ book: selectedBook, sortBy })
       const payload = response.data as ApiResponse<Contact[]>
       setContacts(payload.data || [])
     } catch (err) {
@@ -39,8 +62,36 @@ export default function ContactsPage() {
   }
 
   useEffect(() => {
-    loadContacts()
+    loadBooks()
   }, [])
+
+  useEffect(() => {
+    loadContacts()
+  }, [selectedBook, sortBy])
+
+  const handleSearch = async () => {
+    if (!searchCity.trim() && !searchState.trim()) {
+      await loadContacts()
+      return
+    }
+    setIsLoading(true)
+    setError(null)
+    try {
+      const response = await searchContacts({
+        city: searchCity.trim() || undefined,
+        state: searchState.trim() || undefined,
+      })
+      const payload = response.data as ApiResponse<Array<{ contact: Contact; addressBook: string }>>
+      const filtered = (payload.data || [])
+        .filter((entry) => entry.addressBook === selectedBook)
+        .map((entry) => entry.contact)
+      setContacts(filtered)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Search failed')
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const handleAddClick = () => {
     setFormMode('create')
@@ -60,7 +111,7 @@ export default function ContactsPage() {
       return
     }
     try {
-      await deleteContact(contact.id)
+      await deleteContact(contact.id, selectedBook)
       await loadContacts()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to delete contact')
@@ -72,9 +123,9 @@ export default function ContactsPage() {
     setError(null)
     try {
       if (formMode === 'edit' && activeContact) {
-        await updateContact(activeContact.id, payload)
+        await updateContact(activeContact.id, payload, selectedBook)
       } else {
-        await createContact(payload)
+        await createContact(payload, selectedBook)
       }
       setIsModalOpen(false)
       setActiveContact(null)
@@ -91,10 +142,61 @@ export default function ContactsPage() {
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">Contacts</h1>
-          <p className="text-sm text-slate-500">Manage your address book in one place.</p>
+          <p className="text-sm text-slate-500">Book-aware CRUD with search and sort.</p>
         </div>
         <Button onClick={handleAddClick}>Add Contact</Button>
       </header>
+
+      <div className="grid gap-3 rounded-lg border border-slate-200 bg-white p-4 md:grid-cols-5">
+        <div className="space-y-1">
+          <label className="text-xs font-medium uppercase text-slate-500">Address Book</label>
+          <select
+            value={selectedBook}
+            onChange={(event) => setSelectedBook(event.target.value)}
+            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+          >
+            {(addressBooks.length ? addressBooks : [defaultBook]).map((book) => (
+              <option key={book} value={book}>
+                {book}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-medium uppercase text-slate-500">Sort By</label>
+          <select
+            value={sortBy}
+            onChange={(event) => setSortBy(event.target.value as SortOption)}
+            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+          >
+            <option value="name">Name</option>
+            <option value="city">City</option>
+            <option value="state">State</option>
+            <option value="zip">Zip</option>
+          </select>
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-medium uppercase text-slate-500">Search City</label>
+          <Input value={searchCity} onChange={(event) => setSearchCity(event.target.value)} placeholder="City" />
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-medium uppercase text-slate-500">Search State</label>
+          <Input value={searchState} onChange={(event) => setSearchState(event.target.value)} placeholder="State" />
+        </div>
+        <div className="flex items-end gap-2">
+          <Button onClick={handleSearch} className="w-full">Search</Button>
+          <Button
+            onClick={() => {
+              setSearchCity('')
+              setSearchState('')
+              loadContacts()
+            }}
+            className="w-full bg-slate-200 text-slate-700 hover:bg-slate-300"
+          >
+            Reset
+          </Button>
+        </div>
+      </div>
 
       {error && (
         <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
