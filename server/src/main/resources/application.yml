@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: server
+  datasource:
+    url: ${AB_DB_URL:jdbc:postgresql://localhost:5432/addressbook}
+    username: ${AB_DB_USERNAME:addressbook_user}
+    password: ${AB_DB_PASSWORD:change_me}
+    driver-class-name: org.postgresql.Driver
+  sql:
+    init:
+      mode: always
+jsonserver:
+  base-url: http://localhost:3000/contacts
